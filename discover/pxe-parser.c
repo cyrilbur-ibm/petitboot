@@ -31,11 +31,14 @@ struct pxe_parser_info {
 	char				**pxe_conf_files;
 	struct pb_url			*pxe_base_url;
 	int				current;
+	char	                        *proxy;
 };
 
 static void pxe_finish(struct conf_context *conf)
 {
 	struct pxe_parser_info *info = conf->parser_info;
+	if (info->proxy && info->opt)
+		info->opt->proxy = talloc_strdup(info->opt, info->proxy);
 	if (info->opt)
 		discover_context_add_boot_option(conf->dc, info->opt);
 }
@@ -145,6 +148,20 @@ static void pxe_process_pair(struct conf_context *ctx,
 
 	if (streq(name, "DEFAULT")) {
 		parser_info->default_name = talloc_strdup(parser_info, value);
+		return;
+	}
+
+	if (streq(name, "PROXY")) {
+		if (parser_info->proxy)
+			talloc_free(parser_info->proxy);
+		/*
+		 * TODO: Not sure if we'll get a NULL value or
+		 * *value = '\0';
+		 */
+		if (value)
+			parser_info->proxy = talloc_strdup(parser_info, value);
+		else
+			parser_info->proxy = NULL;
 		return;
 	}
 
